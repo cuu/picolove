@@ -883,8 +883,13 @@ function api.foreach(a,f)
 		warning('foreach got a nil value')
 		return
 	end
+	local len = #a
 	for i,v in ipairs(a) do
 		f(v)
+		--if #a ~= len then
+		--	api.foreach(a,f)
+		--	break
+		--end
 	end
 end
 

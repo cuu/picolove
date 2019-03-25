@@ -1,4 +1,4 @@
 .PHONY: all
 
 all:
-	@love .
+	LD_LIBRARY_PATH=/usr/local/lib/ love .

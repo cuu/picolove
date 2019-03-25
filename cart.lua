@@ -233,198 +233,235 @@ function cart.load_p8(filename)
 
 		-- load the sprites into an imagedata
 		-- generate a quad for each sprite index
-		local gfx_start = data:find('__gfx__') + 7 + #eol_chars
-		local gfx_end = data:find('__gff__') - 1
-		local gfxdata = data:sub(gfx_start,gfx_end)
-
-		local row = 0
-		local tile_row = 32
-		local tile_col = 0
-		local col = 0
-		local sprite = 0
 		local tiles = 0
-		local shared = 0
 
-		local next_line = 1
-		while next_line do
-			local end_of_line = gfxdata:find(eol_chars,next_line)
-			if end_of_line == nil then break end
-			end_of_line = end_of_line - 1
-			local line = gfxdata:sub(next_line,end_of_line)
-			for i=1,#line do
-				local v = line:sub(i,i)
-				v = tonumber(v,16)
-				pico8.spritesheet_data:setPixel(col,row,v*16,v*16,v*16,255)
-
-				col = col + 1
-				if col == 128 then
-					col = 0
-					row = row + 1
-				end
+		local gfx_start = data:find('__gfx__')
+		if gfx_start ~= nil then
+			gfx_start = gfx_start + 7 + #eol_chars
+			local gfx_end = data:find('__',gfx_start) 
+			if gfx_end == nil then
+			gfx_end = #data
+			else
+				gfx_end= gfx_end -1
 			end
-			next_line = gfxdata:find(eol_chars,end_of_line)+#eol_chars
-		end
+			local gfxdata = data:sub(gfx_start,gfx_end)
 
-		if version > 3 then
-			local tx,ty = 0,32
-			for sy=64,127 do
-				for sx=0,127,2 do
-					-- get the two pixel values and merge them
-					local lo = api.flr(pico8.spritesheet_data:getPixel(sx,sy)/16)
-					local hi = api.flr(pico8.spritesheet_data:getPixel(sx+1,sy)/16)
-					local v = api.bor(api.shl(hi,4),lo)
-					pico8.map[ty][tx] = v
-					shared = shared + 1
-					tx = tx + 1
-					if tx == 128 then
-						tx = 0
-						ty = ty + 1
+			local row = 0
+			local tile_row = 32
+			local tile_col = 0
+			local col = 0
+			local sprite = 0
+			local shared = 0
+
+			local next_line = 1
+			while next_line do
+				local end_of_line = gfxdata:find(eol_chars,next_line)
+				if end_of_line == nil then break end
+				end_of_line = end_of_line - 1
+				local line = gfxdata:sub(next_line,end_of_line)
+				for i=1,#line do
+					local v = line:sub(i,i)
+					v = tonumber(v,16)
+					pico8.spritesheet_data:setPixel(col,row,v*16,v*16,v*16,255)
+
+					col = col + 1
+					if col == 128 then
+						col = 0
+						row = row + 1
 					end
 				end
+				next_line = gfxdata:find(eol_chars,end_of_line)+#eol_chars
 			end
-			assert(shared == 128 * 32,shared)
-		end
 
-		for y=0,15 do
-			for x=0,15 do
-				pico8.quads[sprite] = love.graphics.newQuad(8*x,8*y,8,8,128,128)
-				sprite = sprite + 1
+			if version > 3 then
+				local tx,ty = 0,32
+				for sy=64,127 do
+					for sx=0,127,2 do
+						-- get the two pixel values and merge them
+						local lo = api.flr(pico8.spritesheet_data:getPixel(sx,sy)/16)
+						local hi = api.flr(pico8.spritesheet_data:getPixel(sx+1,sy)/16)
+						local v = api.bor(api.shl(hi,4),lo)
+						pico8.map[ty][tx] = v
+						shared = shared + 1
+						tx = tx + 1
+						if tx == 128 then
+							tx = 0
+							ty = ty + 1
+						end
+					end
+				end
+				assert(shared == 128 * 32,shared)
 			end
+
+			for y=0,15 do
+				for x=0,15 do
+					pico8.quads[sprite] = love.graphics.newQuad(8*x,8*y,8,8,128,128)
+					sprite = sprite + 1
+				end
+			end
+
+			--assert(sprite == 256,sprite)
+
+			pico8.spritesheet = love.graphics.newImage(pico8.spritesheet_data)
 		end
-
-		assert(sprite == 256,sprite)
-
-		pico8.spritesheet = love.graphics.newImage(pico8.spritesheet_data)
 
 		-- load the sprite flags
 
-		local gff_start = data:find('__gff__') + 7 + #eol_chars
-		local gff_end = data:find('__map__') - 1
-		local gffdata = data:sub(gff_start,gff_end)
-
-		local sprite = 0
-
-		local next_line = 1
-		while next_line do
-			local end_of_line = gffdata:find(eol_chars,next_line)
-			if end_of_line == nil then break end
-			end_of_line = end_of_line - 1
-			local line = gffdata:sub(next_line,end_of_line)
-			if version <= 2 then
-				for i=1,#line do
-					local v = line:sub(i)
-					v = tonumber(v,16)
-					pico8.spriteflags[sprite] = v
-					sprite = sprite + 1
-				end
-			else
-				for i=1,#line,2 do
-					local v = line:sub(i,i+1)
-					v = tonumber(v,16)
-					pico8.spriteflags[sprite] = v
-					sprite = sprite + 1
-				end
+		local gff_start = data:find('__gff__')
+		if gff_start ~= nil then 
+			gff_start = gff_start + 7 + #eol_chars
+			
+			local gff_end = data:find('__',gff_start)
+			if gff_end == nil then
+				gff_end = #data 
+			else 
+				gff_end = gff_end - 1
 			end
-			next_line = gffdata:find(eol_chars,end_of_line)+#eol_chars
-		end
+			local gffdata = data:sub(gff_start,gff_end)
 
-		assert(sprite == 256,'wrong number of spriteflags:'..sprite)
+			local sprite = 0
+
+			local next_line = 1
+			while next_line do
+				local end_of_line = gffdata:find(eol_chars,next_line)
+				if end_of_line == nil then break end
+				end_of_line = end_of_line - 1
+				local line = gffdata:sub(next_line,end_of_line)
+				if version <= 2 then
+					for i=1,#line do
+						local v = line:sub(i)
+						v = tonumber(v,16)
+						pico8.spriteflags[sprite] = v
+						sprite = sprite + 1
+					end
+				else
+					for i=1,#line,2 do
+						local v = line:sub(i,i+1)
+						v = tonumber(v,16)
+						pico8.spriteflags[sprite] = v
+						sprite = sprite + 1
+					end
+				end
+				next_line = gffdata:find(eol_chars,end_of_line)+#eol_chars
+			end
+
+			assert(sprite == 256,'wrong number of spriteflags:'..sprite)
+		end
 
 		-- convert the tile data to a table
 
-		local map_start = data:find('__map__') + 7 + #eol_chars
-		local map_end = data:find('__sfx__') - 1
-		local mapdata = data:sub(map_start,map_end)
-
-		local row = 0
-		local col = 0
-
-		local next_line = 1
-		while next_line do
-			local end_of_line = mapdata:find(eol_chars,next_line)
-			if end_of_line == nil then
-				break
+		local map_start = data:find('__map__')
+		if map_start ~= nil then
+			map_start = map_start + 7 + #eol_chars
+			local map_end = data:find('__',map_start)
+			if map_end == nil then
+			map_end = #data
+			else
+			map_end = map_end - 1
 			end
-			end_of_line = end_of_line - 1
-			local line = mapdata:sub(next_line,end_of_line)
-			for i=1,#line,2 do
-				local v = line:sub(i,i+1)
-				v = tonumber(v,16)
-				if col == 0 then
+			local mapdata = data:sub(map_start,map_end)
+
+			local row = 0
+			local col = 0
+
+			local next_line = 1
+			while next_line do
+				local end_of_line = mapdata:find(eol_chars,next_line)
+				if end_of_line == nil then
+					break
 				end
-				pico8.map[row][col] = v
-				col = col + 1
-				tiles = tiles + 1
-				if col == 128 then
-					col = 0
-					row = row + 1
+				end_of_line = end_of_line - 1
+				local line = mapdata:sub(next_line,end_of_line)
+				for i=1,#line,2 do
+					local v = line:sub(i,i+1)
+					v = tonumber(v,16)
+					if col == 0 then
+					end
+					pico8.map[row][col] = v
+					col = col + 1
+					tiles = tiles + 1
+					if col == 128 then
+						col = 0
+						row = row + 1
+					end
 				end
+				next_line = mapdata:find(eol_chars,end_of_line)+#eol_chars
 			end
-			next_line = mapdata:find(eol_chars,end_of_line)+#eol_chars
+		--	assert(tiles + shared == 128 * 64,string.format('%d + %d != %d',tiles,shared,128*64))
 		end
-		assert(tiles + shared == 128 * 64,string.format('%d + %d != %d',tiles,shared,128*64))
 
 		-- load sfx
-		local sfx_start = data:find('__sfx__') + 7 + #eol_chars
-		local sfx_end = data:find('__music__') - 1
-		local sfxdata = data:sub(sfx_start,sfx_end)
-
-		local _sfx = 0
-		local step = 0
-
-		local next_line = 1
-		while next_line do
-			local end_of_line = sfxdata:find(eol_chars,next_line)
-			if end_of_line == nil then break end
-			end_of_line = end_of_line - 1
-			local line = sfxdata:sub(next_line,end_of_line)
-			local editor_mode = tonumber(line:sub(1,2),16)
-			pico8.sfx[_sfx].speed = tonumber(line:sub(3,4),16)
-			pico8.sfx[_sfx].loop_start = tonumber(line:sub(5,6),16)
-			pico8.sfx[_sfx].loop_end = tonumber(line:sub(7,8),16)
-			for i=9,#line,5 do
-				local v = line:sub(i,i+4)
-				assert(#v == 5)
-				local note  = tonumber(line:sub(i,i+1),16)
-				local instr = tonumber(line:sub(i+2,i+2),16)
-				local vol   = tonumber(line:sub(i+3,i+3),16)
-				local fx    = tonumber(line:sub(i+4,i+4),16)
-				pico8.sfx[_sfx][step] = {note,instr,vol,fx}
-				step = step + 1
+		local sfx_start = data:find('__sfx__')
+		if sfx_start ~= nil then
+			sfx_start = sfx_start + 7 + #eol_chars
+			local sfx_end = data:find('__')
+			if sfx_end == nil then
+			sfx_end = #data
+			else 
+			sfx_end = sfx_end - 1
 			end
-			_sfx = _sfx + 1
-			step = 0
-			next_line = sfxdata:find(eol_chars,end_of_line)+#eol_chars
-		end
 
-		assert(_sfx == 64)
+			local sfxdata = data:sub(sfx_start,sfx_end)
+
+			local _sfx = 0
+			local step = 0
+
+			local next_line = 1
+			while next_line do
+				local end_of_line = sfxdata:find(eol_chars,next_line)
+				if end_of_line == nil then break end
+				end_of_line = end_of_line - 1
+				local line = sfxdata:sub(next_line,end_of_line)
+				local editor_mode = tonumber(line:sub(1,2),16)
+				pico8.sfx[_sfx].speed = tonumber(line:sub(3,4),16)
+				pico8.sfx[_sfx].loop_start = tonumber(line:sub(5,6),16)
+				pico8.sfx[_sfx].loop_end = tonumber(line:sub(7,8),16)
+				for i=9,#line,5 do
+					local v = line:sub(i,i+4)
+					assert(#v == 5)
+					local note  = tonumber(line:sub(i,i+1),16)
+					local instr = tonumber(line:sub(i+2,i+2),16)
+					local vol   = tonumber(line:sub(i+3,i+3),16)
+					local fx    = tonumber(line:sub(i+4,i+4),16)
+					pico8.sfx[_sfx][step] = {note,instr,vol,fx}
+					step = step + 1
+				end
+				_sfx = _sfx + 1
+				step = 0
+				next_line = sfxdata:find(eol_chars,end_of_line)+#eol_chars
+			end
+
+	--		assert(_sfx == 64)
+		end
 
 		-- load music
-		local music_start = data:find('__music__') + 9 + #eol_chars
-		local music_end = #data-#eol_chars
-		local musicdata = data:sub(music_start,music_end)
+		local music_start = data:find('__music__')
+		if music_start~= nil then 
+			music_start = music_start + 9 + #eol_chars
+			local music_end = #data-#eol_chars
+			local musicdata = data:sub(music_start,music_end)
 
-		local _music = 0
+			local _music = 0
 
-		local next_line = 1
-		while next_line do
-			local end_of_line = musicdata:find('\n',next_line)
-			if end_of_line == nil then break end
-			end_of_line = end_of_line - 1
-			local line = musicdata:sub(next_line,end_of_line)
+			local next_line = 1
+			while next_line do
+				local end_of_line = musicdata:find('\n',next_line)
+				if end_of_line == nil then break end
+				end_of_line = end_of_line - 1
+				local line = musicdata:sub(next_line,end_of_line)
 
-			pico8.music[_music] = {
-				loop = tonumber(line:sub(1,2),16),
-				[0] = tonumber(line:sub(4,5),16),
-				[1] = tonumber(line:sub(6,7),16),
-				[2] = tonumber(line:sub(8,9),16),
-				[3] = tonumber(line:sub(10,11),16)
-			}
-			_music = _music + 1
-			next_line = musicdata:find('\n',end_of_line)+1
+				pico8.music[_music] = {
+					loop = tonumber(line:sub(1,2),16),
+					[0] = tonumber(line:sub(4,5),16),
+					[1] = tonumber(line:sub(6,7),16),
+					[2] = tonumber(line:sub(8,9),16),
+					[3] = tonumber(line:sub(10,11),16)
+				}
+				_music = _music + 1
+				next_line = musicdata:find('\n',end_of_line)+1
+			end
 		end
 	end
-
 	-- patch the lua
 	lua = lua:gsub('!=','~=')
 	-- rewrite shorthand if statements eg. if (not b) i=1 j=2
