@@ -884,13 +884,19 @@ function api.foreach(a,f)
 		return
 	end
 	local len = #a
+	local j = 1
 	for i,v in ipairs(a) do
 		f(v)
-		--if #a ~= len then
-		--	api.foreach(a,f)
-		--	break
-		--end
+		if #a < len then
+			break
+		end
+		j = j + 1
 	end
+	
+	if j < len then
+		api.foreach(a,f)
+	end
+
 end
 
 function api.count(a)
